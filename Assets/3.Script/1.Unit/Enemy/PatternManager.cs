@@ -82,8 +82,7 @@ public class PatternManager : MonoBehaviour
 
             yield return new WaitForSeconds(patternData.FireRate);
         }
-
-        // TODO: BattleManager의 몬스터 턴 종료 함수(예: EndMonsterTurn()) 호출 로직 추가
+        
         if(battleManager != null)
         {
             battleManager.EndEnemyTurn();

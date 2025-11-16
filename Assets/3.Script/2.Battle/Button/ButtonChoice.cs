@@ -52,7 +52,7 @@ public class ButtonChoice : MonoBehaviour
         {
             CurrentMainButtonIndex = GetNextIndex(CurrentMainButtonIndex, direction, MainButtonPosition.Length);
             
-            battleManager.MoveHeart(MainButtonPosition, CurrentMainButtonIndex);
+            battleManager.MoveActHeart(MainButtonPosition, CurrentMainButtonIndex);
         }
         else
         {
@@ -62,7 +62,7 @@ public class ButtonChoice : MonoBehaviour
             {
                 CurrentSubButtonIndex = GetNextIndex(CurrentSubButtonIndex, direction, activeCount);
 
-                battleManager.MoveHeart(SubButtonPosition, CurrentSubButtonIndex);
+                battleManager.MoveActHeart(SubButtonPosition, CurrentSubButtonIndex);
             }
         }
     }
@@ -95,7 +95,7 @@ public class ButtonChoice : MonoBehaviour
 
             battleManager.OpenSubMenu(CurrentMainButtonIndex);
 
-            battleManager.MoveHeart(SubButtonPosition, CurrentSubButtonIndex);
+            battleManager.MoveActHeart(SubButtonPosition, CurrentSubButtonIndex);
         }
         else
         {
@@ -109,7 +109,7 @@ public class ButtonChoice : MonoBehaviour
 
         CurrentSubButtonIndex = 0;
 
-        battleManager.MoveHeart(MainButtonPosition, CurrentMainButtonIndex);
+        battleManager.MoveActHeart(MainButtonPosition, CurrentMainButtonIndex);
 
         battleManager.CloseSubMenu();
     }

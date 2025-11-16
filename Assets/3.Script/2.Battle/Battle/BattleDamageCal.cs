@@ -71,9 +71,10 @@ public class BattleDamageCal : MonoBehaviour
 
         float damage = TotalDamage();
 
-        Debug.Log($"데미지 : {TotalDamage()}");
-
-        // TODO: BattleManager.Instance.ApplyDamage(damage); 호출 로직을 여기에 넣습니다.
+        if (battleManager != null)
+        {
+            battleManager.AttackDamage(TotalDamage());
+        }
     }
 
     private IEnumerator SetSprite_co(Sprite originalSprite, Sprite highlightSprite)
@@ -102,7 +103,7 @@ public class BattleDamageCal : MonoBehaviour
 
         weaponObj.SetActive(false);
 
-        battleManager.HandleEndAttackTurn();
+        battleManager.StartEnemyTurn();
 
         this.enabled = false;
     }

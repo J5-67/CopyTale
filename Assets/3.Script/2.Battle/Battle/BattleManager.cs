@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class BattleManager : MonoBehaviour
 {
@@ -32,10 +33,12 @@ public class BattleManager : MonoBehaviour
     [Header("적 데이터")]
     [SerializeField] private EnemyController enemyController;
 
+    private Dictionary<int, int> spareCount = new Dictionary<int, int>();
     private List<GameObject> activeMenuTexts = new List<GameObject>();
     private List<GameObject> activeEnemies = new List<GameObject>();
-    private EnemyData currentEnemyData;
     private PatternManager patternManager;
+    private EnemyData currentEnemyData;
+    private int currentSpareAction = 0;
     private const int FIGHT_INDEX = 0;
     private const int ACT_INDEX = 1;
     private const int ITEM_INDEX = 2;
@@ -49,6 +52,8 @@ public class BattleManager : MonoBehaviour
         if (GameManager.Instance.enemyData != null)
         {
             currentEnemyData = GameManager.Instance.enemyData;
+
+            currentEnemyData.CalEnemyHP();
         }
 
         if (DialogueText != null)
@@ -58,7 +63,7 @@ public class BattleManager : MonoBehaviour
 
         if (MainButtonPosition.Length > 0)
         {
-            MoveHeart(MainButtonPosition, buttonChoice.CurrentMainButtonIndex);
+            MoveActHeart(MainButtonPosition, buttonChoice.CurrentMainButtonIndex);
         }
 
         ClearSubButtons();
@@ -94,15 +99,19 @@ public class BattleManager : MonoBehaviour
             case FIGHT_INDEX:
                 DisplayFightSubMenu();
                 break;
-
             case ACT_INDEX:
                 DisplayActSubMenu();
                 break;
-
-                // TODO: ITEM_INDEX, MERCY_INDEX 서브 메뉴 추가
+            case ITEM_INDEX:
+                DisplayItemSubMenu();
+                break;
+            case MERCY_INDEX:
+                DisplayMercySubMenu();
+                break;
         }
     }
 
+    #region 서브 메뉴
     private void DisplayFightSubMenu()
     {
         ClearSubButtons();
@@ -158,14 +167,43 @@ public class BattleManager : MonoBehaviour
         ActiveSubButtonCount = activeMenuTexts.Count;
     }
 
-
-    public void MoveHeart(Transform[] positions, int index)
+    private void DisplayItemSubMenu()
     {
-        if (Act_Heart != null && index >= 0 && index < positions.Length)
-        {
-            Act_Heart.transform.position = positions[index].position;
-        }
+
     }
+
+    private void DisplayMercySubMenu()
+    {
+        ClearSubButtons();
+        GameObject spareButton = Instantiate(MenuTextPrefab, MenuTextParent);
+        activeMenuTexts.Add(spareButton);
+        TMP_Text spareText = spareButton.GetComponentInChildren<TMP_Text>();
+        if (spareText != null)
+        {
+            spareText.text = "살려주기";
+            if (currentEnemyData.IsSpare)
+            {
+                spareText.color = Color.yellow;
+            }
+            else
+            {
+                spareText.color = Color.white;
+            }
+        }
+
+        GameObject escapeButton = Instantiate(MenuTextPrefab, MenuTextParent);
+        escapeButton.SetActive(true);
+        activeMenuTexts.Add(escapeButton);
+        TMP_Text escapeText = escapeButton.GetComponentInChildren<TMP_Text>();
+        if (escapeText != null)
+        {
+            escapeText.text = "도망치기";
+        }
+
+        ActiveSubButtonCount = activeMenuTexts.Count;
+    }
+
+    #endregion
 
     public void StartSubAction(int mainIndex, int subIndex)
     {
@@ -174,26 +212,48 @@ public class BattleManager : MonoBehaviour
             case FIGHT_INDEX:
                 if (subIndex >= 0 && subIndex < activeEnemies.Count)
                 {
-                    AttackBg.SetActive(true);
-                    AttackBar.SetActive(true);
-                    Act_Heart.SetActive(false);
-                    buttonChoice.enabled = false;
-
-                    ClearSubButtons();
-
-                    battleDamageCal.enabled = true;
+                    Attack();
                 }
                 break;
-
             case ACT_INDEX:
-                HandleActSubAction(subIndex);
+                Act(subIndex);
                 break;
-
-                // TODO: ITEM_INDEX, MERCY_INDEX StartSubAction 로직 추가
+            case ITEM_INDEX:
+                break;
+            case MERCY_INDEX:
+                Mercy(subIndex);
+                break;
         }
     }
 
-    private void HandleActSubAction(int index)
+    private void Attack()
+    {
+        AttackBg.SetActive(true);
+        AttackBar.SetActive(true);
+        Act_Heart.SetActive(false);
+        buttonChoice.enabled = false;
+
+        ClearSubButtons();
+
+        battleDamageCal.enabled = true;
+    }
+
+    public void AttackDamage(float damage)
+    {
+        int intDamage = Mathf.RoundToInt(damage);
+
+        currentEnemyData.TakeDamage(intDamage);
+
+        Debug.Log($"적에게 {damage}의 피해를 입혔습니다. 적의 체력 : {currentEnemyData.CurrentHP}");
+
+        if(currentEnemyData.Spare.type == SpareConditionType.Attack)
+        {
+            currentSpareAction++;
+            CheckSpare();
+        }
+    }
+
+    private void Act(int index)
     {
         if (currentEnemyData == null) return;
 
@@ -213,19 +273,86 @@ public class BattleManager : MonoBehaviour
                 DialogueText.text = dialogue;
             }
 
-            ClearSubButtons();
-            Act_Heart.SetActive(false);
+            if(currentEnemyData.Spare.type == SpareConditionType.Act && currentEnemyData.Spare.index == index)
+            {
+                currentSpareAction++;
+                CheckSpare();
+            }
 
-            // TODO: 행동 실행 후 턴 종료 (EndTurn) 로직 호출
+            StartEnemyTurn();
         }
     }
 
-    // TODO: HandleItemSubAction, HandleMercySubAction 추가
-
-    public void HandleEndAttackTurn()
+    private void Item()
     {
-        AttackBg.SetActive(false);
-        AttackBar.SetActive(false);
+
+    }
+
+    private void Mercy(int index)
+    {
+        if (index == 0)
+        {
+            if (currentEnemyData.IsSpare)
+            {
+                BattleEnd(false);
+            }
+            else
+            {
+                if(currentEnemyData.Spare.type == SpareConditionType.Mercy)
+                {
+                    currentSpareAction++;
+                    CheckSpare();
+                }
+                StartEnemyTurn();
+            }
+        }
+        else if (index == 1)
+        {
+            float escapeChance = 50f + (currentEnemyData.EscapeCount * 10f);
+            float rnd = UnityEngine.Random.Range(0f, 100f);
+
+            if(rnd <= escapeChance)
+            {
+                BattleEnd(true);
+            }
+            else
+            {
+                currentEnemyData.PlusEscapeCount();
+                StartEnemyTurn();
+            }
+        }
+
+        ClearSubButtons();
+        if(Act_Heart.activeSelf == true)
+        {
+            Act_Heart.SetActive(false);
+        }
+    }
+
+    public void StartEnemyTurn()
+    {
+        ClearSubButtons();
+
+        if (buttonChoice.enabled == true)
+        {
+            buttonChoice.enabled = false;
+        }
+
+        if (battleDamageCal.enabled == true)
+        {
+            battleDamageCal.enabled = false;
+        }
+
+        if (Act_Heart.activeSelf == true)
+        {
+            Act_Heart.SetActive(false);
+        }
+
+        if (AttackBg.activeSelf && AttackBar.activeSelf)
+        {
+            AttackBg.SetActive(false);
+            AttackBar.SetActive(false);
+        }
 
         foreach (GameObject TextBorder in BattleTextBorder)
         {
@@ -277,14 +404,55 @@ public class BattleManager : MonoBehaviour
 
         if (MainButtonPosition.Length > 0)
         {
-            MoveHeart(MainButtonPosition, buttonChoice.CurrentMainButtonIndex);
+            MoveActHeart(MainButtonPosition, buttonChoice.CurrentMainButtonIndex);
+        }
+    }
+
+    private void CheckSpare()
+    {
+        if(currentEnemyData == null || currentEnemyData.IsSpare)
+        {
+            return;
+        }
+
+        Spare spare = currentEnemyData.Spare;
+
+        if(spare.needCount <= 0)
+        {
+            return;
+        }
+
+        if (currentSpareAction >= spare.needCount)
+        {
+            currentEnemyData.SetSpare(true);
+        }
+    }
+
+    public void BattleEnd(bool rebattle)
+    {
+        if(patternManager != null)
+        {
+            patternManager.StopMonsterAttack();
+        }
+
+        // 2. 필요한 데이터 저장 (재전투 가능 여부 등)
+
+        SceneManager.LoadScene("MainGame");
+
+        EndTurn();
+        this.enabled = false;
+    }
+
+    public void MoveActHeart(Transform[] positions, int index)
+    {
+        if (Act_Heart != null && index >= 0 && index < positions.Length)
+        {
+            Act_Heart.transform.position = positions[index].position;
         }
     }
 
     public void CloseSubMenu()
     {
         ClearSubButtons();
-
-        // TODO: 서브 메뉴 패널 배경 등을 닫는 로직도 여기에 추가하면 돼!
     }
 }
