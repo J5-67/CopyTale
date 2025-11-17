@@ -35,6 +35,13 @@ public class ButtonChoice : MonoBehaviour
         CurrentSubButtonIndex = 0;
     }
 
+    public void ResetSubChoice()
+    {
+        CurrentSubButtonIndex = 0;
+
+        battleManager.MoveActHeart(SubButtonPosition, CurrentSubButtonIndex);
+    }
+
     private void HandleMovementInput()
     {
         int direction = 0;

@@ -5,6 +5,7 @@ using UnityEngine;
 public class PatternManager : MonoBehaviour
 {
     private BattleManager battleManager;
+    private EnemyData currentEnemyData;
     private Coroutine currentPatternCoroutine;
 
     private List<GameObject> activeBullet = new List<GameObject>();
@@ -16,6 +17,8 @@ public class PatternManager : MonoBehaviour
 
     public void StartPattern(EnemyData enemyData, Vector3 bulletSpawnPosition)
     {
+        this.currentEnemyData = enemyData;
+
         if (currentPatternCoroutine != null)
         {
             StopCoroutine(currentPatternCoroutine);
@@ -57,6 +60,11 @@ public class PatternManager : MonoBehaviour
             for (int i = 0; i < patternData.BulletCount; i++)
             {
                 GameObject newBullet = Instantiate(patternData.BulletPrefab, bulletSpawnPosition, Quaternion.identity);
+
+                if(newBullet.TryGetComponent(out EnemyBulletController bulletController))
+                {
+                    bulletController.BulletDamage = currentEnemyData.RealEnemyAttack;
+                }   
 
                 activeBullet.Add(newBullet);
 

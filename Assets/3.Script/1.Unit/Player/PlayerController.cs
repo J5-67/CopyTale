@@ -16,16 +16,8 @@ public class PlayerController : MonoBehaviour
         TryGetComponent(out movement2D);
         TryGetComponent(out playerAnimator);
     }
-
-    private void Start()
-    {
-        
-    }
-
     void Update()
     {
-        #region 플레이어 이동
-
         //인풋시스템
         float inputX = Input.GetAxisRaw("Horizontal");
         float inputY = Input.GetAxisRaw("Vertical");
@@ -54,9 +46,5 @@ public class PlayerController : MonoBehaviour
         playerAnimator.SetBool(isMovingParam, isMoving);
         playerAnimator.SetFloat(animXParam, finalAnimX);
         playerAnimator.SetFloat(animYParam, finalAnimY);
-
-        
-
-        #endregion
     }
 }

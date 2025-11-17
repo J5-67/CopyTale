@@ -4,6 +4,13 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.SceneManagement;
 
+public enum BattleOutcome
+{
+    Spare,
+    Kill,
+    Escape
+}
+
 public class BattleManager : MonoBehaviour
 {
     [Header("플레이어 하트")]
@@ -43,17 +50,38 @@ public class BattleManager : MonoBehaviour
     private const int ACT_INDEX = 1;
     private const int ITEM_INDEX = 2;
     private const int MERCY_INDEX = 3;
+    private int selectedEnemyIndex = -1;
     public int ActiveSubButtonCount { get; private set; } = 0;
+
 
     void Start()
     {
+        if(GameManager.Instance == null)
+        {
+            Debug.LogError("error: no GameManager");
+            SceneManager.LoadScene("MainGame");
+            return;
+        }
+
         TryGetComponent(out patternManager);
 
-        if (GameManager.Instance.enemyData != null)
+        if (GameManager.Instance.enemyDataForNextBattle != null)
         {
-            currentEnemyData = GameManager.Instance.enemyData;
-
+            currentEnemyData = GameManager.Instance.enemyDataForNextBattle;
             currentEnemyData.CalEnemyHP();
+        }
+        else
+        {
+            Debug.LogError("error no enemydata in gamemanager");
+            SceneManager.LoadScene("MainGame");
+            return;
+        }
+
+        GameManager.Instance.SetEnemyDataForBattle(null);
+
+        if(Fight_Heart != null && Fight_Heart.TryGetComponent(out HeartController hc))
+        {
+            hc.SetBattleManager(this);
         }
 
         if (DialogueText != null)
@@ -71,22 +99,15 @@ public class BattleManager : MonoBehaviour
         //일단 하나만
         GameObject mainEnemy = GameObject.FindGameObjectWithTag("Flowey");
 
-        activeEnemies.Add(mainEnemy);
-    }
-
-    private void ClearSubButtons()
-    {
-        foreach (GameObject textObj in activeMenuTexts)
+        if(mainEnemy != null)
         {
-            if (textObj != null)
-            {
-                Destroy(textObj);
-            }
+            activeEnemies.Add(mainEnemy);
+
         }
-        activeMenuTexts.Clear();
-        ActiveSubButtonCount = 0;
     }
 
+
+    #region Sub Menu
     public void OpenSubMenu(int mainIndex)
     {
         if (EnemyNameText != null)
@@ -94,25 +115,22 @@ public class BattleManager : MonoBehaviour
             EnemyNameText.gameObject.SetActive(false);
         }
 
+        selectedEnemyIndex = -1;
+
         switch (mainIndex)
         {
             case FIGHT_INDEX:
-                DisplayFightSubMenu();
-                break;
             case ACT_INDEX:
-                DisplayActSubMenu();
+            case MERCY_INDEX:
+                DisplayEnemySelect();
                 break;
             case ITEM_INDEX:
                 DisplayItemSubMenu();
                 break;
-            case MERCY_INDEX:
-                DisplayMercySubMenu();
-                break;
         }
     }
 
-    #region 서브 메뉴
-    private void DisplayFightSubMenu()
+    private void DisplayEnemySelect()
     {
         ClearSubButtons();
 
@@ -131,11 +149,25 @@ public class BattleManager : MonoBehaviour
             if (subMenuText != null)
             {
                 subMenuText.text = currentEnemyData.EnemyName;
+
+                if (currentEnemyData.IsSpare)
+                {
+                    subMenuText.color = Color.yellow;
+                }
+                else
+                {
+                    subMenuText.color = Color.white;
+                }
             }
         }
 
         ActiveSubButtonCount = activeMenuTexts.Count;
     }
+
+    //private void DisplayFightSubMenu()
+    //{
+    //    
+    //}
 
     private void DisplayActSubMenu()
     {
@@ -176,6 +208,7 @@ public class BattleManager : MonoBehaviour
     {
         ClearSubButtons();
         GameObject spareButton = Instantiate(MenuTextPrefab, MenuTextParent);
+        spareButton.SetActive(true);
         activeMenuTexts.Add(spareButton);
         TMP_Text spareText = spareButton.GetComponentInChildren<TMP_Text>();
         if (spareText != null)
@@ -203,29 +236,47 @@ public class BattleManager : MonoBehaviour
         ActiveSubButtonCount = activeMenuTexts.Count;
     }
 
-    #endregion
-
     public void StartSubAction(int mainIndex, int subIndex)
     {
-        switch (mainIndex)
+        if(selectedEnemyIndex == -1)
         {
-            case FIGHT_INDEX:
-                if (subIndex >= 0 && subIndex < activeEnemies.Count)
-                {
-                    Attack();
-                }
-                break;
-            case ACT_INDEX:
-                Act(subIndex);
-                break;
-            case ITEM_INDEX:
-                break;
-            case MERCY_INDEX:
-                Mercy(subIndex);
-                break;
+            selectedEnemyIndex = subIndex;
+
+            if(mainIndex == FIGHT_INDEX)
+            {
+                Attack();
+                selectedEnemyIndex = -1;
+                return;
+            }
+            else if(mainIndex == ACT_INDEX)
+            {
+                DisplayActSubMenu();
+                buttonChoice.ResetSubChoice();
+                return;
+            }else if(mainIndex == MERCY_INDEX)
+            {
+                DisplayMercySubMenu();
+                buttonChoice.ResetSubChoice();
+                return;
+            }
         }
+
+        if(mainIndex == ACT_INDEX)
+        {
+            Act(subIndex);
+        }
+        else if(mainIndex == MERCY_INDEX)
+        {
+            Mercy(subIndex);
+        }
+
+        selectedEnemyIndex = -1;
     }
 
+    #endregion
+
+
+    #region Attack
     private void Attack()
     {
         AttackBg.SetActive(true);
@@ -244,15 +295,22 @@ public class BattleManager : MonoBehaviour
 
         currentEnemyData.TakeDamage(intDamage);
 
-        Debug.Log($"적에게 {damage}의 피해를 입혔습니다. 적의 체력 : {currentEnemyData.CurrentHP}");
+        if (currentEnemyData.CurrentHP <= 0)
+        {
+            BattleEnd(BattleOutcome.Kill);
+            return;
+        }
 
-        if(currentEnemyData.Spare.type == SpareConditionType.Attack)
+        if (currentEnemyData.Spare.type == SpareConditionType.Attack)
         {
             currentSpareAction++;
             CheckSpare();
         }
     }
+    #endregion
 
+
+    #region Act
     private void Act(int index)
     {
         if (currentEnemyData == null) return;
@@ -282,19 +340,25 @@ public class BattleManager : MonoBehaviour
             StartEnemyTurn();
         }
     }
+    #endregion
 
+
+    #region Item
     private void Item()
     {
 
     }
+    #endregion
 
+
+    #region Mercy
     private void Mercy(int index)
     {
         if (index == 0)
         {
             if (currentEnemyData.IsSpare)
             {
-                BattleEnd(false);
+                BattleEnd(BattleOutcome.Spare);
             }
             else
             {
@@ -313,7 +377,7 @@ public class BattleManager : MonoBehaviour
 
             if(rnd <= escapeChance)
             {
-                BattleEnd(true);
+                BattleEnd(BattleOutcome.Escape);
             }
             else
             {
@@ -329,6 +393,30 @@ public class BattleManager : MonoBehaviour
         }
     }
 
+
+    private void CheckSpare()
+    {
+        if(currentEnemyData == null || currentEnemyData.IsSpare)
+        {
+            return;
+        }
+
+        Spare spare = currentEnemyData.Spare;
+
+        if(spare.needCount <= 0)
+        {
+            return;
+        }
+
+        if (currentSpareAction >= spare.needCount)
+        {
+            currentEnemyData.SetSpare(true);
+        }
+    }
+    #endregion
+
+
+    #region Turn
     public void StartEnemyTurn()
     {
         ClearSubButtons();
@@ -408,41 +496,44 @@ public class BattleManager : MonoBehaviour
         }
     }
 
-    private void CheckSpare()
-    {
-        if(currentEnemyData == null || currentEnemyData.IsSpare)
-        {
-            return;
-        }
-
-        Spare spare = currentEnemyData.Spare;
-
-        if(spare.needCount <= 0)
-        {
-            return;
-        }
-
-        if (currentSpareAction >= spare.needCount)
-        {
-            currentEnemyData.SetSpare(true);
-        }
-    }
-
-    public void BattleEnd(bool rebattle)
+    public void BattleEnd(BattleOutcome outcome)
     {
         if(patternManager != null)
         {
             patternManager.StopMonsterAttack();
         }
 
-        // 2. 필요한 데이터 저장 (재전투 가능 여부 등)
+        if(GameManager.Instance != null && currentEnemyData != null)
+        {
+            if (outcome == BattleOutcome.Kill || outcome == BattleOutcome.Spare)
+            {
+                if (GameManager.Instance != null && currentEnemyData != null)
+                {
+                    GameManager.Instance.RecordBattleEnd(currentEnemyData.EnemyName, outcome);
+                }
+            }
+
+            if(outcome == BattleOutcome.Kill)
+            {
+                GameManager.Instance.AddEXP(currentEnemyData.ExpDrop);
+                GameManager.Instance.AddGold(currentEnemyData.GoldDrop);
+            }
+            else if(outcome == BattleOutcome.Spare)
+            {
+                GameManager.Instance.AddGold(currentEnemyData.GoldDrop);
+            }
+        }
 
         SceneManager.LoadScene("MainGame");
 
         EndTurn();
+
         this.enabled = false;
     }
+    #endregion
 
+
+    #region ETC
     public void MoveActHeart(Transform[] positions, int index)
     {
         if (Act_Heart != null && index >= 0 && index < positions.Length)
@@ -451,8 +542,21 @@ public class BattleManager : MonoBehaviour
         }
     }
 
+    private void ClearSubButtons()
+    {
+        foreach (GameObject textObj in activeMenuTexts)
+        {
+            if (textObj != null)
+            {
+                Destroy(textObj);
+            }
+        }
+        activeMenuTexts.Clear();
+        ActiveSubButtonCount = 0;
+    }
     public void CloseSubMenu()
     {
         ClearSubButtons();
     }
+    #endregion
 }

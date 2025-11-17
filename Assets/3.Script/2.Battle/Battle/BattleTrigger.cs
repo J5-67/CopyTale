@@ -14,6 +14,11 @@ public class BattleTrigger : MonoBehaviour
     {
         if (isInTrigger && Input.GetKeyDown(KeyCode.Z))
         {
+            if (targetEnemyData == null)
+            {
+                Debug.LogError("targetEnemyData가 Null입니다! 적의 충돌 영역에 들어갔을 때 데이터 할당이 안 된 것 같아요.");
+                return; // Null이면 여기서 멈춥니다.
+            }
             Debug.Log("전투 시작" + targetEnemyData.EnemyName);
             StartBattle();
         }
@@ -26,11 +31,6 @@ public class BattleTrigger : MonoBehaviour
         isInTrigger = true;
 
         targetEnemyData = dataHolder.enemyDataAsset;
-
-        //if (collision.CompareTag("Flowey"))
-        //{
-        //    Debug.Log("플라위 접촉");
-        //}
     }
 
     private void OnTriggerExit2D(Collider2D collision)
@@ -38,11 +38,6 @@ public class BattleTrigger : MonoBehaviour
         isInTrigger = false;
 
         targetEnemyData = null;
-
-        //if (collision.CompareTag("Flowey"))
-        //{
-        //    Debug.Log("플라위 접촉 해제");
-        //}
     }
 
     private void StartBattle()

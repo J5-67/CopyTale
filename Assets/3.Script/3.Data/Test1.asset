@@ -13,13 +13,21 @@ MonoBehaviour:
   m_Name: Test1
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: " * \uD50C\uB77C\uC704"
-  maxHP: 100
+  maxHP: 5
   realEnemyAttack: 5
   realEnemyDefense: 2
   fakeEnemyAttack: 5
   fakeEnemyDefense: 2
-  experienceDrop: 100
+  expDrop: 500
   goldDrop: 100
+  spare:
+    type: 2
+    index: 1
+    needCount: 1
+  normalDialogues:
+  - "\uD50C\uB77C\uC704\uAC00 \uC2EC\uC2EC\uD574 \uBCF4\uC778\uB2E4."
+  spareDialogues:
+  - "\uD50C\uB77C\uC704: \uACE0\uB9C8\uC6CC! \uC798 \uAC00."
   encounterDialogue: "\uC548\uB155 \uB09C \uD50C\uB77C\uC704"
   reacts:
   - " * \uC0B4\uD3B4\uBCF4\uAE30"
@@ -58,7 +66,3 @@ MonoBehaviour:
     FireRate: 0.5
     Speed: 1
     AngleOffset: 15
-  needActionCount: 2
-  fightPlusCount: 0
-  actPlusCount: 000100
-  mercyPlusCount: 0

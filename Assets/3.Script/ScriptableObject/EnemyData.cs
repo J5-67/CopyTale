@@ -34,10 +34,6 @@ public enum SpareConditionType
 [CreateAssetMenu(fileName = "EnemyData", menuName = "Scriptable Objects/EnemyData")]
 public class EnemyData : ScriptableObject
 {
-    private bool isSpare = false;
-
-    private int escapeCount = 0;
-
     [Header("--- 기본 정보 ---")]
 
     [SerializeField]
@@ -60,13 +56,28 @@ public class EnemyData : ScriptableObject
     private int fakeEnemyDefense = 2; 
 
     [SerializeField]
-    private int experienceDrop = 100;
+    private int expDrop = 100;
 
     [SerializeField]
     private int goldDrop = 100;
 
-    //[SerializeField]
-    //public List<GameObject> DefaultProjectilePrefab = new List<GameObject>();
+    [Header("--- 자비 조건 ---")]
+    [SerializeField]
+    private Spare spare;
+
+    private bool isSpare = false;
+
+    private int escapeCount = 0;
+
+    [Header("--- 대사 정보 ---")]
+
+    [SerializeField]
+    [TextArea(2, 5)]
+    private List<string> normalDialogues = new List<string> { "플라위가 심심해 보인다." };
+
+    [SerializeField]
+    [TextArea(2, 5)]
+    private List<string> spareDialogues = new List<string> { "플라위: 고마워! 잘 가." };
 
     [SerializeField]
     [TextArea(2, 5)]
@@ -84,23 +95,10 @@ public class EnemyData : ScriptableObject
     [TextArea(2, 5)]
     private List<string> battleDialogues = new List<string> { "내 친절 알갱이를 받아!" };
 
+    [Header("--- 패턴 정보 ---")]
+
     [SerializeField]
     private List<EnemyPattern> enemyPatterns = new List<EnemyPattern>();
-
-    [Header("--- 자비 조건 ---")]
-    private Spare spare;
-
-    [SerializeField]
-    private int needActionCount = 0;
-
-    [SerializeField]
-    private bool fightPlusCount = false;
-
-    [SerializeField]
-    private List<bool> actPlusCount = new List<bool> { false };
-
-    [SerializeField]
-    private bool mercyPlusCount = false;
 
     public int RealEnemyAttack => realEnemyAttack;
     public int RealEnemyDefense => realEnemyDefense;
@@ -117,25 +115,22 @@ public class EnemyData : ScriptableObject
     {
         CurrentHP = maxHP;
     }
-
     public bool IsSpare => isSpare;
     public int EscapeCount => escapeCount;
-    public int ExperienceDrop => experienceDrop;
+    public int ExpDrop => expDrop;
     public int GoldDrop => goldDrop;
     public string EncounterDialogue => encounterDialogue;
+    public List<string> NormalDialogues => normalDialogues;
+    public List<string> SpareDialogues => spareDialogues;
     public List<string> BattleDialogues => battleDialogues;
     public List<string> Reacts => reacts;
     public List<string> ReactsDialogues => reactsDialogues;
     public Spare Spare => spare;
     public List<EnemyPattern> EnemyPatterns => enemyPatterns;
-    public int NeedActionCount => needActionCount;
-    public bool FightPlusCount => fightPlusCount;
-    public List<bool> ActPlusCount => actPlusCount;
-    public bool MercyPlusCount => mercyPlusCount;
 
-    public void SetSpare(bool yes)
+    public void SetSpare(bool isSpare)
     {
-        isSpare = true;
+        this.isSpare = isSpare;
     }
     public void PlusEscapeCount()
     {
@@ -155,5 +150,12 @@ public class EnemyData : ScriptableObject
         CurrentHP = Mathf.Max(0, CurrentHP);
 
         return finalDamage;
+    }
+
+    private void OnEnable()
+    {
+        isSpare = false;
+        escapeCount = 0;
+        currentHP = maxHP;
     }
 }
