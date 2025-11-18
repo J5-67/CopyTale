@@ -2,16 +2,14 @@ using UnityEngine;
 
 public class CameraController : MonoBehaviour
 {
-    [SerializeField] private new Camera camera;
-    [SerializeField] private GameObject player;
-    private Vector3 camera_position = new Vector3(0f, 0f, -10f);
+    [SerializeField] private Transform playerTarget;
+    private Vector3 offset = new Vector3(0f, 0f, -10f);
 
-    private void Start()
-    {
-        camera = Camera.main;
-    }
     void LateUpdate()
     {
-        camera.transform.position = player.transform.position + camera_position;
+        if (playerTarget != null)
+        {
+            transform.position = playerTarget.position + offset;
+        }
     }
 }

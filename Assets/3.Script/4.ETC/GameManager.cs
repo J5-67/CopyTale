@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public enum BattleResult
 {
@@ -16,9 +17,11 @@ public class GameManager : MonoBehaviour
     [Header("적 데이터 중앙 창고")]
     [SerializeField]
     private List<EnemyData> allEnemyData = new List<EnemyData>();
-
     private Dictionary<string, EnemyData> enemyDataMap = new Dictionary<string, EnemyData>();
     private Dictionary<string, BattleResult> EnemyStatus = new Dictionary<string, BattleResult>();
+    public event Action playerStatsUpdate;
+
+    public InventoryManager Inventory { get; private set; }
     public EnemyData enemyDataForNextBattle { get; private set; }
 
     [Header("플레이어 기본 스탯")]
@@ -50,6 +53,12 @@ public class GameManager : MonoBehaviour
         else
         {
             Destroy(gameObject);
+        }
+
+        Inventory = FindAnyObjectByType<InventoryManager>();
+        if(Inventory == null)
+        {
+            Debug.LogError("[GameManager] InventoryManager를 씬에서 찾을 수 없습니다! 확인해주세요.");
         }
     }
 
@@ -121,20 +130,36 @@ public class GameManager : MonoBehaviour
 
         PlayerCurrentHP -= finalDamage;
 
+        playerStatsUpdate?.Invoke();
+
         if (PlayerCurrentHP < 0)
         {
             PlayerCurrentHP = 0;
-            // TODO: 게임 오버 로직 호출
+            SceneManager.LoadScene("GameOver");
         }
     }
 
     public void AddGold(int amount)
     {
         PlayerCurrentGold += amount;
+        playerStatsUpdate?.Invoke();
+    }
+
+    public bool MinusGold(int amount)
+    {
+        if(PlayerCurrentGold >= amount)
+        {
+            PlayerCurrentGold -= amount;
+            playerStatsUpdate?.Invoke();
+            return true;
+        }
+
+        return false;
     }
 
     public void AddEXP(int amount)
     {
+
         PlayerCurrentEXP += amount;
 
         while(PlayerCurrentEXP >= PlayerNeedEXP)
@@ -146,6 +171,7 @@ public class GameManager : MonoBehaviour
             PlayerAttack *= 2;
             PlayerMaxHP *= 2;
             PlayerCurrentHP = PlayerMaxHP;
+            playerStatsUpdate?.Invoke();
         }
     }
 }

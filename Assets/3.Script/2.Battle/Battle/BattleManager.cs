@@ -16,6 +16,7 @@ public class BattleManager : MonoBehaviour
     [Header("플레이어 하트")]
     [SerializeField] private GameObject Fight_Heart;
     [SerializeField] private GameObject Act_Heart;
+    [SerializeField] private GameObject Escape_Heart;
     [SerializeField] private ButtonChoice buttonChoice;
 
     [Header("버튼 위치")]
@@ -56,7 +57,7 @@ public class BattleManager : MonoBehaviour
 
     void Start()
     {
-        if(GameManager.Instance == null)
+        if (GameManager.Instance == null)
         {
             Debug.LogError("error: no GameManager");
             SceneManager.LoadScene("MainGame");
@@ -102,7 +103,6 @@ public class BattleManager : MonoBehaviour
         if(mainEnemy != null)
         {
             activeEnemies.Add(mainEnemy);
-
         }
     }
 
@@ -295,6 +295,7 @@ public class BattleManager : MonoBehaviour
 
         currentEnemyData.TakeDamage(intDamage);
 
+
         if (currentEnemyData.CurrentHP <= 0)
         {
             BattleEnd(BattleOutcome.Kill);
@@ -377,7 +378,10 @@ public class BattleManager : MonoBehaviour
 
             if(rnd <= escapeChance)
             {
-                BattleEnd(BattleOutcome.Escape);
+                Escape_Heart.transform.position = Act_Heart.transform.position;
+                Act_Heart.SetActive(false);
+                StartCoroutine(Escape_co());
+                
             }
             else
             {
@@ -391,6 +395,28 @@ public class BattleManager : MonoBehaviour
         {
             Act_Heart.SetActive(false);
         }
+    }
+
+    private IEnumerator Escape_co()
+    {
+        float escapeDuration = 2f;
+        float t = 0f;
+
+        while(t < escapeDuration)
+        {
+            t += Time.deltaTime;
+
+            Vector3 newPos = Escape_Heart.transform.position;
+
+            newPos.x += 3f * Time.deltaTime;
+
+            Escape_Heart.transform.position = newPos;
+
+            yield return null;
+        }
+
+        yield return new WaitForSeconds(0.5f);
+        BattleEnd(BattleOutcome.Escape);
     }
 
 
